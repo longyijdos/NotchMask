@@ -48,7 +48,7 @@ and does not pick up JPEG compression artifacts.
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `input` | Input image path. | Required unless `--print-screen` is used |
-| `-o, --output PATH` | Output image path. The extension controls the output format. | `input.notchmask.png` |
+| `-o, --output PATH` | Output image path. Supported extensions are `.png`, `.jpg`, and `.jpeg`. | `input.notchmask.png` |
 | `--screen WIDTHxHEIGHT` | Output wallpaper size in pixels, for example `2940x1912`. | Auto-detected main screen size |
 | `--bar-height PX` | Height of the black top mask in output pixels. | Auto-detected menu-bar/notch height |
 | `--corner-radius PX` | Top corner radius of the visible wallpaper area. Use `0` to disable rounded corners. | `20` |

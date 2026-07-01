@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw
 
 Size = tuple[int, int]
 Color = tuple[int, int, int]
+SUPPORTED_OUTPUT_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
 
 def parse_size(value: str) -> Size:
@@ -79,9 +80,9 @@ def scaled_bar_height(native_size: Size, output_size: Size, native_bar_height: i
     if native_bar_height <= 0:
         return 0
 
-    native_width, native_height = native_size
-    output_width, output_height = output_size
-    scale = min(output_width / native_width, output_height / native_height)
+    _, native_height = native_size
+    _, output_height = output_size
+    scale = output_height / native_height
     return max(1, round(native_bar_height * scale))
 
 
@@ -137,14 +138,19 @@ def draw_notch_mask(
 
     # Build the visible wallpaper area as one continuous shape, then invert it
     # into the black overlay mask. Restrict antialiasing work to the top strip.
-    scale = 8
-    strip_height = min(height, bar_height + radius + 2)
-    content_mask = Image.new("L", (width * scale, strip_height * scale), 0)
+    antialias_scale = 8
+    antialias_padding = 4
+    strip_height = min(height, bar_height + radius + antialias_padding)
+    content_mask = Image.new(
+        "L",
+        (width * antialias_scale, strip_height * antialias_scale),
+        0,
+    )
     mask_draw = ImageDraw.Draw(content_mask)
-    scaled_radius = radius * scale
-    scaled_width = width * scale
-    scaled_strip_height = strip_height * scale
-    scaled_bar_height = bar_height * scale
+    scaled_radius = radius * antialias_scale
+    scaled_width = width * antialias_scale
+    scaled_strip_height = strip_height * antialias_scale
+    scaled_bar_height = bar_height * antialias_scale
 
     mask_draw.rectangle(
         (scaled_radius, scaled_bar_height, scaled_width - scaled_radius, scaled_strip_height),
@@ -184,12 +190,14 @@ def save_image(image: Image.Image, output_path: Path, quality: int) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     suffix = output_path.suffix.lower()
 
+    if suffix not in SUPPORTED_OUTPUT_SUFFIXES:
+        supported = ", ".join(sorted(SUPPORTED_OUTPUT_SUFFIXES))
+        raise ValueError(f"Unsupported output format '{suffix or '(none)'}'. Use one of: {supported}")
+
     if suffix in {".jpg", ".jpeg"}:
         image.save(output_path, quality=quality, subsampling=0, optimize=True)
-    elif suffix == ".png":
-        image.save(output_path)
     else:
-        image.save(output_path.with_suffix(".jpg"), quality=quality, optimize=True)
+        image.save(output_path)
 
 
 def set_wallpaper(image_path: Path) -> None:
@@ -205,6 +213,7 @@ def set_wallpaper(image_path: Path) -> None:
         raise RuntimeError("Could not read the main screen.")
 
     url = NSURL.fileURLWithPath_(str(image_path.resolve()))
+    # Empty options asks macOS to use its default desktop image placement.
     ok, error = NSWorkspace.sharedWorkspace().setDesktopImageURL_forScreen_options_error_(
         url,
         screen,
