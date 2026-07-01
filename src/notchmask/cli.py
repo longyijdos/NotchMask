@@ -50,7 +50,7 @@ def parse_color(value: str) -> Color:
         raise argparse.ArgumentTypeError("color must be a name or hex value like #000000") from exc
 
 
-def main_screen_size() -> Size:
+def main_screen_metrics() -> tuple[Size, int]:
     try:
         from AppKit import NSScreen
     except ImportError as exc:
@@ -63,10 +63,26 @@ def main_screen_size() -> Size:
         raise RuntimeError("Could not read the main screen.")
 
     frame = screen.frame()
+    visible_frame = screen.visibleFrame()
     scale = screen.backingScaleFactor()
     width = round(frame.size.width * scale)
     height = round(frame.size.height * scale)
-    return int(width), int(height)
+
+    frame_top = frame.origin.y + frame.size.height
+    visible_top = visible_frame.origin.y + visible_frame.size.height
+    top_bar_height = round(max(0, frame_top - visible_top) * scale)
+
+    return (int(width), int(height)), int(top_bar_height)
+
+
+def scaled_bar_height(native_size: Size, output_size: Size, native_bar_height: int) -> int:
+    if native_bar_height <= 0:
+        return 0
+
+    native_width, native_height = native_size
+    output_width, output_height = output_size
+    scale = min(output_width / native_width, output_height / native_height)
+    return max(1, round(native_bar_height * scale))
 
 
 def default_output_path(input_path: Path) -> Path:
@@ -120,7 +136,8 @@ def draw_notch_mask(
         draw.rectangle((0, 0, width, bar_height), fill=bar_color)
         return image
 
-    # Draw at a higher resolution and downsample so the rounded edge is smooth.
+    # Draw at a higher resolution and downsample so the visible wallpaper area
+    # starts with rounded top corners below the black menu-bar band.
     scale = 4
     mask = Image.new("L", (width * scale, height * scale), 0)
     mask_draw = ImageDraw.Draw(mask)
@@ -128,10 +145,28 @@ def draw_notch_mask(
     scaled_width = width * scale
     scaled_bar_height = bar_height * scale
 
-    mask_draw.rounded_rectangle(
-        (0, -scaled_radius, scaled_width, scaled_bar_height),
-        radius=scaled_radius,
+    mask_draw.rectangle((0, 0, scaled_width, scaled_bar_height), fill=255)
+    mask_draw.rectangle((0, scaled_bar_height, scaled_radius, scaled_bar_height + scaled_radius), fill=255)
+    mask_draw.rectangle(
+        (scaled_width - scaled_radius, scaled_bar_height, scaled_width, scaled_bar_height + scaled_radius),
         fill=255,
+    )
+    mask_draw.pieslice(
+        (0, scaled_bar_height, scaled_radius * 2, scaled_bar_height + scaled_radius * 2),
+        180,
+        270,
+        fill=0,
+    )
+    mask_draw.pieslice(
+        (
+            scaled_width - scaled_radius * 2,
+            scaled_bar_height,
+            scaled_width,
+            scaled_bar_height + scaled_radius * 2,
+        ),
+        270,
+        360,
+        fill=0,
     )
 
     mask = mask.resize((width, height), Image.Resampling.LANCZOS)
@@ -182,7 +217,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("input", type=Path, nargs="?", help="input image")
     parser.add_argument("-o", "--output", type=Path, help="output image path")
     parser.add_argument("--screen", type=parse_size, help="output size in pixels, like 2940x1912")
-    parser.add_argument("--bar-height", type=int, default=96, help="top black bar height in pixels")
+    parser.add_argument(
+        "--bar-height",
+        type=int,
+        help="top black bar height in pixels; defaults to the macOS menu-bar/notch height",
+    )
     parser.add_argument("--corner-radius", type=int, default=0, help="bottom corner radius of the black bar")
     parser.add_argument("--bar-color", type=parse_color, default=(0, 0, 0), help="bar color name or hex")
     parser.add_argument("--background", type=parse_color, default=(0, 0, 0), help="contain mode background")
@@ -198,10 +237,17 @@ def run(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        screen_size = args.screen or main_screen_size()
+        native_screen_size, native_bar_height = main_screen_metrics()
+        screen_size = args.screen or native_screen_size
+        bar_height = (
+            args.bar_height
+            if args.bar_height is not None
+            else scaled_bar_height(native_screen_size, screen_size, native_bar_height)
+        )
 
         if args.print_screen:
-            print(f"{screen_size[0]}x{screen_size[1]}")
+            print(f"screen={screen_size[0]}x{screen_size[1]}")
+            print(f"bar_height={bar_height}")
             return 0
 
         if args.input is None:
@@ -221,7 +267,7 @@ def run(argv: list[str] | None = None) -> int:
 
         wallpaper = draw_notch_mask(
             wallpaper,
-            bar_height=args.bar_height,
+            bar_height=bar_height,
             bar_color=args.bar_color,
             corner_radius=max(0, args.corner_radius),
         )

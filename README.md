@@ -27,7 +27,7 @@ Defaults:
 
 - screen size: current main macOS screen in physical pixels
 - fit mode: `cover`, which fills the screen and crops excess image area
-- top black bar height: `96` physical pixels
+- top black bar height: current macOS menu-bar/notch height
 - corner radius: `0`
 
 If the automatic screen size is not what you expect, run:
@@ -36,4 +36,6 @@ If the automatic screen size is not what you expect, run:
 uv run notchmask input.jpg --print-screen
 ```
 
-Then pass the exact wallpaper pixel size with `--screen`.
+Then pass the exact wallpaper pixel size with `--screen`. If you pass `--screen`,
+the automatic bar height is scaled to the output size. You can still override it
+with `--bar-height`.
