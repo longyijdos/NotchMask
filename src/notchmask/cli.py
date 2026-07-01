@@ -231,7 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--corner-radius",
         type=int,
-        default=24,
+        default=20,
         help="top corner radius of the visible wallpaper area",
     )
     parser.add_argument("--bar-color", type=parse_color, default=(0, 0, 0), help="bar color name or hex")

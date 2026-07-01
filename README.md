@@ -39,7 +39,7 @@ and does not pick up JPEG compression artifacts.
 | Output size | Current main macOS screen in physical pixels |
 | Image fitting | `cover` |
 | Top black bar height | Current macOS menu-bar/notch height |
-| Corner radius | `24` physical pixels |
+| Corner radius | `20` physical pixels |
 | Output format | PNG |
 | JPEG quality | `100` |
 
@@ -51,7 +51,7 @@ and does not pick up JPEG compression artifacts.
 | `-o, --output PATH` | Output image path. The extension controls the output format. | `input.notchmask.png` |
 | `--screen WIDTHxHEIGHT` | Output wallpaper size in pixels, for example `2940x1912`. | Auto-detected main screen size |
 | `--bar-height PX` | Height of the black top mask in output pixels. | Auto-detected menu-bar/notch height |
-| `--corner-radius PX` | Top corner radius of the visible wallpaper area. Use `0` to disable rounded corners. | `24` |
+| `--corner-radius PX` | Top corner radius of the visible wallpaper area. Use `0` to disable rounded corners. | `20` |
 | `--bar-color COLOR` | Color of the top mask. Supports `black`, `white`, or hex like `#000000`. | `black` |
 | `--fit cover` | Fill the whole output size and crop overflow from the center. | Default fit mode |
 | `--fit contain` | Keep the full input image visible and fill empty space with `--background`. | Off |
