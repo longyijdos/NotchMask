@@ -40,6 +40,7 @@ and does not pick up JPEG compression artifacts.
 | Image fitting | `cover` |
 | Top black bar height | Current macOS menu-bar/notch height |
 | Corner radius | `20` physical pixels |
+| Bottom corner radius | `20` physical pixels |
 | Output format | PNG |
 | JPEG quality | `100` |
 
@@ -52,6 +53,7 @@ and does not pick up JPEG compression artifacts.
 | `--screen WIDTHxHEIGHT` | Output wallpaper size in pixels, for example `2940x1912`. | Auto-detected main screen size |
 | `--bar-height PX` | Height of the black top mask in output pixels. | Auto-detected menu-bar/notch height |
 | `--corner-radius PX` | Top corner radius of the visible wallpaper area. Use `0` to disable rounded corners. | `20` |
+| `--bottom-corner-radius PX` | Bottom corner radius of the visible wallpaper area. Use `0` to disable bottom rounded corners. | `20` |
 | `--bar-color COLOR` | Color of the top mask. Supports `black`, `white`, or hex like `#000000`. | `black` |
 | `--fit cover` | Fill the whole output size and crop overflow from the center. | Default fit mode |
 | `--fit contain` | Keep the full input image visible and fill empty space with `--background`. | Off |
@@ -84,6 +86,12 @@ Disable rounded corners:
 
 ```bash
 uv run notchmask input.jpg --corner-radius 0
+```
+
+Disable bottom rounded corners:
+
+```bash
+uv run notchmask input.jpg --bottom-corner-radius 0
 ```
 
 Use a custom output size:

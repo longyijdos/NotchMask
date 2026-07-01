@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 
 
 Size = tuple[int, int]
@@ -118,23 +118,19 @@ def contain_image(image: Image.Image, size: Size, background: Color) -> Image.Im
     return target
 
 
-def draw_notch_mask(
-    image: Image.Image,
-    bar_height: int,
-    bar_color: Color,
-    corner_radius: int,
-) -> Image.Image:
+def top_corner_mask(size: Size, bar_height: int, radius: int) -> Image.Image:
+    width, height = size
     if bar_height <= 0:
-        return image
+        return Image.new("L", size, 0)
 
-    width, height = image.size
     bar_height = min(bar_height, height)
-    radius = min(max(0, corner_radius), width // 2, bar_height)
+    radius = min(max(0, radius), width // 2, bar_height)
 
     if radius == 0:
-        draw = ImageDraw.Draw(image)
-        draw.rectangle((0, 0, width, bar_height), fill=bar_color)
-        return image
+        mask = Image.new("L", size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rectangle((0, 0, width, bar_height), fill=255)
+        return mask
 
     # Build the visible wallpaper area as one continuous shape, then invert it
     # into the black overlay mask. Restrict antialiasing work to the top strip.
@@ -179,9 +175,75 @@ def draw_notch_mask(
     )
 
     content_mask = content_mask.resize((width, strip_height), Image.Resampling.LANCZOS)
-    top_mask = content_mask.point(lambda value: 255 - value)
-    mask = Image.new("L", image.size, 0)
-    mask.paste(top_mask, (0, 0))
+    top_strip_mask = content_mask.point(lambda value: 255 - value)
+    mask = Image.new("L", size, 0)
+    mask.paste(top_strip_mask, (0, 0))
+    return mask
+
+
+def bottom_corner_mask(size: Size, radius: int) -> Image.Image:
+    width, height = size
+    radius = min(max(0, radius), width // 2, height)
+
+    if radius == 0:
+        return Image.new("L", size, 0)
+
+    antialias_scale = 8
+    antialias_padding = 4
+    strip_height = min(height, radius + antialias_padding)
+    content_mask = Image.new(
+        "L",
+        (width * antialias_scale, strip_height * antialias_scale),
+        0,
+    )
+    mask_draw = ImageDraw.Draw(content_mask)
+    scaled_radius = radius * antialias_scale
+    scaled_width = width * antialias_scale
+    scaled_strip_height = strip_height * antialias_scale
+
+    mask_draw.rectangle((0, 0, scaled_width, scaled_strip_height - scaled_radius), fill=255)
+    mask_draw.rectangle(
+        (scaled_radius, scaled_strip_height - scaled_radius, scaled_width - scaled_radius, scaled_strip_height),
+        fill=255,
+    )
+    mask_draw.pieslice(
+        (0, scaled_strip_height - scaled_radius * 2, scaled_radius * 2, scaled_strip_height),
+        90,
+        180,
+        fill=255,
+    )
+    mask_draw.pieslice(
+        (
+            scaled_width - scaled_radius * 2,
+            scaled_strip_height - scaled_radius * 2,
+            scaled_width,
+            scaled_strip_height,
+        ),
+        0,
+        90,
+        fill=255,
+    )
+
+    content_mask = content_mask.resize((width, strip_height), Image.Resampling.LANCZOS)
+    bottom_strip_mask = content_mask.point(lambda value: 255 - value)
+    mask = Image.new("L", size, 0)
+    mask.paste(bottom_strip_mask, (0, height - strip_height))
+    return mask
+
+
+def draw_notch_mask(
+    image: Image.Image,
+    bar_height: int,
+    bar_color: Color,
+    corner_radius: int,
+    bottom_corner_radius: int,
+) -> Image.Image:
+    if bar_height <= 0 and bottom_corner_radius <= 0:
+        return image
+
+    mask = top_corner_mask(image.size, bar_height, corner_radius)
+    bottom_mask = bottom_corner_mask(image.size, bottom_corner_radius)
+    mask = ImageChops.lighter(mask, bottom_mask)
     overlay = Image.new("RGB", image.size, bar_color)
     return Image.composite(overlay, image, mask)
 
@@ -243,6 +305,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=20,
         help="top corner radius of the visible wallpaper area",
     )
+    parser.add_argument(
+        "--bottom-corner-radius",
+        type=int,
+        default=20,
+        help="bottom corner radius of the visible wallpaper area",
+    )
     parser.add_argument("--bar-color", type=parse_color, default=(0, 0, 0), help="bar color name or hex")
     parser.add_argument("--background", type=parse_color, default=(0, 0, 0), help="contain mode background")
     parser.add_argument("--fit", choices=["cover", "contain"], default="cover", help="image fitting mode")
@@ -295,6 +363,7 @@ def run(argv: list[str] | None = None) -> int:
             bar_height=bar_height,
             bar_color=args.bar_color,
             corner_radius=max(0, args.corner_radius),
+            bottom_corner_radius=max(0, args.bottom_corner_radius),
         )
 
         save_image(wallpaper, output_path, args.quality)
