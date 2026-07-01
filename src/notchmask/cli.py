@@ -86,8 +86,7 @@ def scaled_bar_height(native_size: Size, output_size: Size, native_bar_height: i
 
 
 def default_output_path(input_path: Path) -> Path:
-    suffix = input_path.suffix or ".jpg"
-    return input_path.with_name(f"{input_path.stem}.notchmask{suffix}")
+    return input_path.with_name(f"{input_path.stem}.notchmask.png")
 
 
 def cover_image(image: Image.Image, size: Size) -> Image.Image:
@@ -136,26 +135,30 @@ def draw_notch_mask(
         draw.rectangle((0, 0, width, bar_height), fill=bar_color)
         return image
 
-    # Draw at a higher resolution and downsample so the visible wallpaper area
-    # starts with rounded top corners below the black menu-bar band.
-    scale = 4
-    mask = Image.new("L", (width * scale, height * scale), 0)
-    mask_draw = ImageDraw.Draw(mask)
+    # Build the visible wallpaper area as one continuous shape, then invert it
+    # into the black overlay mask. Restrict antialiasing work to the top strip.
+    scale = 8
+    strip_height = min(height, bar_height + radius + 2)
+    content_mask = Image.new("L", (width * scale, strip_height * scale), 0)
+    mask_draw = ImageDraw.Draw(content_mask)
     scaled_radius = radius * scale
     scaled_width = width * scale
+    scaled_strip_height = strip_height * scale
     scaled_bar_height = bar_height * scale
 
-    mask_draw.rectangle((0, 0, scaled_width, scaled_bar_height), fill=255)
-    mask_draw.rectangle((0, scaled_bar_height, scaled_radius, scaled_bar_height + scaled_radius), fill=255)
     mask_draw.rectangle(
-        (scaled_width - scaled_radius, scaled_bar_height, scaled_width, scaled_bar_height + scaled_radius),
+        (scaled_radius, scaled_bar_height, scaled_width - scaled_radius, scaled_strip_height),
+        fill=255,
+    )
+    mask_draw.rectangle(
+        (0, scaled_bar_height + scaled_radius, scaled_width, scaled_strip_height),
         fill=255,
     )
     mask_draw.pieslice(
         (0, scaled_bar_height, scaled_radius * 2, scaled_bar_height + scaled_radius * 2),
         180,
         270,
-        fill=0,
+        fill=255,
     )
     mask_draw.pieslice(
         (
@@ -166,10 +169,13 @@ def draw_notch_mask(
         ),
         270,
         360,
-        fill=0,
+        fill=255,
     )
 
-    mask = mask.resize((width, height), Image.Resampling.LANCZOS)
+    content_mask = content_mask.resize((width, strip_height), Image.Resampling.LANCZOS)
+    top_mask = content_mask.point(lambda value: 255 - value)
+    mask = Image.new("L", image.size, 0)
+    mask.paste(top_mask, (0, 0))
     overlay = Image.new("RGB", image.size, bar_color)
     return Image.composite(overlay, image, mask)
 
@@ -222,7 +228,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         help="top black bar height in pixels; defaults to the macOS menu-bar/notch height",
     )
-    parser.add_argument("--corner-radius", type=int, default=0, help="bottom corner radius of the black bar")
+    parser.add_argument(
+        "--corner-radius",
+        type=int,
+        default=0,
+        help="top corner radius of the visible wallpaper area",
+    )
     parser.add_argument("--bar-color", type=parse_color, default=(0, 0, 0), help="bar color name or hex")
     parser.add_argument("--background", type=parse_color, default=(0, 0, 0), help="contain mode background")
     parser.add_argument("--fit", choices=["cover", "contain"], default="cover", help="image fitting mode")

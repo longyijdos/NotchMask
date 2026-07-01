@@ -11,7 +11,8 @@ uv run notchmask input.jpg
 ```
 
 By default, the output is written next to the input image as
-`input.notchmask.jpg`.
+`input.notchmask.png`. PNG is used by default so the black mask edge stays
+clean and does not pick up JPEG compression artifacts.
 
 Useful options:
 
