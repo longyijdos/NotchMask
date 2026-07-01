@@ -1,0 +1,2 @@
+"""NotchMask package."""
+

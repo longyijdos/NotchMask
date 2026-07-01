@@ -1,0 +1,17 @@
+[project]
+name = "notchmask"
+version = "0.1.0"
+description = "Generate macOS wallpapers with a black notch/menu-bar mask."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pillow>=10.0",
+    "pyobjc-framework-Cocoa>=10.0; sys_platform == 'darwin'",
+]
+
+[project.scripts]
+notchmask = "notchmask.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.8.0,<0.9.0"]
+build-backend = "uv_build"

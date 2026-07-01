@@ -1,0 +1,39 @@
+# NotchMask
+
+Generate a macOS wallpaper whose top menu-bar/notch area is black.
+
+## Usage
+
+Install dependencies and run:
+
+```bash
+uv run notchmask input.jpg
+```
+
+By default, the output is written next to the input image as
+`input.notchmask.jpg`.
+
+Useful options:
+
+```bash
+uv run notchmask input.jpg -o output.jpg
+uv run notchmask input.jpg --set-wallpaper
+uv run notchmask input.jpg --bar-height 88 --corner-radius 24
+uv run notchmask input.jpg --screen 2940x1912
+uv run notchmask input.jpg --fit contain --background black
+```
+
+Defaults:
+
+- screen size: current main macOS screen in physical pixels
+- fit mode: `cover`, which fills the screen and crops excess image area
+- top black bar height: `96` physical pixels
+- corner radius: `0`
+
+If the automatic screen size is not what you expect, run:
+
+```bash
+uv run notchmask input.jpg --print-screen
+```
+
+Then pass the exact wallpaper pixel size with `--screen`.
