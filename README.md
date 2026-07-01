@@ -29,7 +29,8 @@ Defaults:
 - screen size: current main macOS screen in physical pixels
 - fit mode: `cover`, which fills the screen and crops excess image area
 - top black bar height: current macOS menu-bar/notch height
-- corner radius: `0`
+- corner radius: `24` physical pixels; pass `--corner-radius 0` to disable it
+- output format: PNG by default; JPEG output uses quality `100`
 
 If the automatic screen size is not what you expect, run:
 

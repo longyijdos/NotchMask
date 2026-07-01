@@ -10,3 +10,6 @@ __pycache__/
 *.notchmask.*
 *.rounded.*
 *-test.*
+notchmask-*.jpg
+notchmask-*.jpeg
+notchmask-*.png

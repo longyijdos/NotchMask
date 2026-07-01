@@ -185,7 +185,7 @@ def save_image(image: Image.Image, output_path: Path, quality: int) -> None:
     suffix = output_path.suffix.lower()
 
     if suffix in {".jpg", ".jpeg"}:
-        image.save(output_path, quality=quality, optimize=True)
+        image.save(output_path, quality=quality, subsampling=0, optimize=True)
     elif suffix == ".png":
         image.save(output_path)
     else:
@@ -231,13 +231,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--corner-radius",
         type=int,
-        default=0,
+        default=24,
         help="top corner radius of the visible wallpaper area",
     )
     parser.add_argument("--bar-color", type=parse_color, default=(0, 0, 0), help="bar color name or hex")
     parser.add_argument("--background", type=parse_color, default=(0, 0, 0), help="contain mode background")
     parser.add_argument("--fit", choices=["cover", "contain"], default="cover", help="image fitting mode")
-    parser.add_argument("--quality", type=int, default=95, help="JPEG output quality")
+    parser.add_argument(
+        "--quality",
+        type=int,
+        default=100,
+        help="JPEG output quality; only used for .jpg/.jpeg output",
+    )
     parser.add_argument("--set-wallpaper", action="store_true", help="set output as the main screen wallpaper")
     parser.add_argument("--print-screen", action="store_true", help="print detected main screen size and exit")
     return parser
